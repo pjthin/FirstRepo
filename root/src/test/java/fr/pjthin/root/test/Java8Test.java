@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.junit.Test;
 
 public class Java8Test {
@@ -71,7 +72,7 @@ public class Java8Test {
 
         java.util.List<String> list = Arrays.asList("AVION", "CAR", "MOTO", "TRAIN", "VOITURE");
 
-        // First step : passsing parameter
+        // First step : passing parameter
         list.forEach((vehicle) -> {
             System.out.println("A vehicle is there ! : " + vehicle);
         });
@@ -125,8 +126,7 @@ public class Java8Test {
 
         @Override
         public String toString() {
-            return this.getClass().getName() + " [name=" + name + ", nbCV=" + nbCV + ", immatriculation="
-                    + immatriculation + "]";
+            return ToStringBuilder.reflectionToString(this);
         }
     }
 
