@@ -119,7 +119,7 @@ public class Java8Test {
 
     }
 
-    private class Car {
+    private static class Car {
         String name;
         int nbCV;
         long immatriculation;

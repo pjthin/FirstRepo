@@ -5,17 +5,10 @@
 						http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
 						http://www.springframework.org/schema/context
 						http://www.springframework.org/schema/context/spring-context-3.0.xsd">
-	
-	<context:annotation-config />
-	<context:component-scan base-package="fr.pjthin.root.spring.autowired.readbyspring" />
-	
-	<!-- Import all configuration -->
-	<import resource="classpath:spring/db/database.xml" />
-	<import resource="classpath:spring/db/dbConnection.xml" />
-	
-	<!-- Local name -->
-	<bean id="appName" class="java.lang.String">
-		<constructor-arg><value>ApplicationTest</value></constructor-arg>
+
+	<bean id="mainArgs" class="fr.pjthin.root.spring.startAndRunArgs.MainArgs">
+		<property name="good" value="#{args[0]}" />
+		<property name="text" value="#{args[1]}" />
 	</bean>
 	
 </beans>

@@ -1,4 +1,4 @@
-package fr.pjthin.root.autowired;
+package fr.pjthin.root.spring.autowired;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,7 +12,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
-import fr.pjthin.root.autowired.readbyspring.GenericService;
+import fr.pjthin.root.spring.autowired.readbyspring.GenericService;
 
 /**
  * Hello world!
