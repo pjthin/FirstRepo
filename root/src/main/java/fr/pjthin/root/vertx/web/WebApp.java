@@ -15,6 +15,8 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
+import java.time.LocalTime;
+
 public class WebApp extends AbstractVerticle {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(WebApp.class);
@@ -27,7 +29,7 @@ public class WebApp extends AbstractVerticle {
 	public void genericFailed(RoutingContext routingContext) {
 		// just to be sure
 		if (routingContext.failed()) {
-			LOGGER.error("WebApp.genericFailed: Failed routing", routingContext.failure());
+			LOGGER.error("Failed routing", routingContext.failure());
 			routingContext.response().end("An error occurred... Please try again.");
 			;
 		}
@@ -44,7 +46,7 @@ public class WebApp extends AbstractVerticle {
 
 		// First url
 		router.get("/hello").handler(h -> {
-			LOGGER.info("WebApp.start: enter path '/hello'");
+			LOGGER.info("Enter path '/hello'");
 			h.response().end("Hello World !");
 		}).failureHandler(this::genericFailed);
 
@@ -54,35 +56,66 @@ public class WebApp extends AbstractVerticle {
 		router.route("/eventbus/*").handler(sockJSHandler).failureHandler(this::genericFailed);
 
 		router.route("/*").handler(h -> {
-			LOGGER.info(String.format("WebApp.start: enter path '%s'", h.normalisedPath()));
+			LOGGER.info(String.format("Enter path '%s'", h.normalisedPath()));
 			h.response().setStatusCode(404).end("Page not found!");
 		}).failureHandler(this::genericFailed);
 
 		// Creating server
 		vertx.createHttpServer(new HttpServerOptions().setHost("127.0.0.1").setPort(8080))
-				.requestHandler(router::accept).listen(lh -> {
+				.requestHandler(router::accept)
+				.listen(lh -> {
 					if (lh.succeeded()) {
+						vertx.setPeriodic(
+								1000,
+								t -> {
+									JsonObject json = new JsonObject().put("hello", "world").put("time",
+											LocalTime.now().toString());
+									LOGGER.trace("publish: " + json);
+									vertx.eventBus().publish("fr.pjthin.ev.client", json);
+								});
 						startFuture.complete();
 					}
 					else {
 						startFuture.fail(lh.cause());
 					}
 				});
+
 	}
 
 	public void handleEventBus(BridgeEvent event) {
-		// TODO
+
+		switch (event.type()) {
+		case SOCKET_CREATED:
+			LOGGER.info("A socket was created");
+			break;
+		case SOCKET_CLOSED:
+			LOGGER.info("A socket was closed");
+			break;
+		// from clients to server
+		case SEND:
+		case PUBLISH:
+			LOGGER.info("Client send: " + event.rawMessage());
+			break;
+		// from server to clients
+		case RECEIVE:
+			LOGGER.info("Server send: " + event.rawMessage());
+			break;
+		default:
+			LOGGER.info("An event occurred: " + event.type());
+			break;
+		}
+
+		// This signals that it's ok to process the event
+		event.complete(true);
 	}
 
 	private BridgeOptions createBridgeAuthorization() {
 		BridgeOptions options = new BridgeOptions();
-		options.addInboundPermitted(
-		// authorized input from "fr.pjthin.ev.in" with json like
-		// {fromPage:'index.html',...}
-				new PermittedOptions().setAddress("fr.pjthin.ev.in").setMatch(
-						new JsonObject().put("fromPage", "index.html")))
-		// authorized output all fr.pjthin.ev.out.*
-				.addOutboundPermitted(new PermittedOptions().setAddressRegex("fr\\.pjthin\\.ev\\.out\\..*"));
+		options
+		// authorized input fr.pjthin.ev.server
+		.addInboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.server"))
+		// authorized output fr.pjthin.ev.client
+				.addOutboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.client"));
 		return options;
 	}
 

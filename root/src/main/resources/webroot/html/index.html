@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>First eventbus Java/JavaScript</title>
+</head>
+<body>
+	<script type="text/javascript" src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/sockjs-client/0.3.4/sockjs.min.js"></script>
+	<script type="text/javascript" src="/static/html/vertx-eventbus.js"></script>
+	<script type="text/javascript">
+		var eb = new EventBus('http://localhost:8080/eventbus');
+
+		eb.onopen = function() {
+			console.log('onopen');
+
+			// set a handler to receive a message
+			eb.registerHandler('fr.pjthin.ev.client', function(err, message) {
+				console.log('received a message: ' + JSON.stringify(message));
+				$('#serverConsole').prepend(JSON.stringify(message.body));
+			});
+
+			setInterval(function() {
+				// send a message every 1,5s
+				eb.send('fr.pjthin.ev.server', {
+					'client': 'I\'m still alive !'
+				});
+			}, 1500);
+
+		}
+	</script>
+	Hello! EventBus good !!!
+	<div id="serverConsole">
+	</div>
+</body>
+</html>
