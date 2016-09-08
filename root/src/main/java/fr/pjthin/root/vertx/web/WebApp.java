@@ -1,5 +1,6 @@
 package fr.pjthin.root.vertx.web;
 
+import fr.pjthin.root.vertx.verticle.UserActor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerOptions;
@@ -20,6 +21,7 @@ import java.time.LocalTime;
 public class WebApp extends AbstractVerticle {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(WebApp.class);
+	private UserActor userActor;
 
 	/**
 	 * Generic failed handler for {@link Route}
@@ -99,6 +101,7 @@ public class WebApp extends AbstractVerticle {
 		// from server to clients
 		case RECEIVE:
 			LOGGER.info("Server send: " + event.rawMessage());
+			handleEventBusReceive(event.rawMessage().getString("address"),event.rawMessage().getJsonObject("body"));
 			break;
 		default:
 			LOGGER.info("An event occurred: " + event.type());
@@ -109,14 +112,38 @@ public class WebApp extends AbstractVerticle {
 		event.complete(true);
 	}
 
+	private void handleEventBusReceive(String address, JsonObject message) {
+		switch (address) {
+		case "fr.pjthin.ev.server.login":
+			userActor.createUser(message.getString("user"), res -> {
+				if (res.failed()) {
+					LOGGER.info(String.format("Failed to create user %s. Cause : %s", message.getString("user"), res
+							.cause().getMessage()));
+				}
+				else {
+//					vertx.eventBus().se
+				}
+			});
+			break;
+
+		default:
+			break;
+		}
+	}
+
 	private BridgeOptions createBridgeAuthorization() {
 		BridgeOptions options = new BridgeOptions();
 		options
 		// authorized input fr.pjthin.ev.server
 		.addInboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.server"))
+		.addInboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.server.login").setMatch(new JsonObject().put("user", "test")))
 		// authorized output fr.pjthin.ev.client
-				.addOutboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.client"));
+		.addOutboundPermitted(new PermittedOptions().setAddress("fr.pjthin.ev.client"));
 		return options;
+	}
+
+	public void setUserActor(UserActor userActor) {
+		this.userActor = userActor;
 	}
 
 }
