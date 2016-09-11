@@ -75,29 +75,29 @@ public class LispStream<T> {
     /**
      * Create a LispStream from an initial value, a LispStream and a transformer.
      * <p>
-     * It is like building an arithmetic progression <code>U(n+1)=transformer(U(n),V(n))</code> and putting it in a
-     * LispStream.
+     * It is like building an arithmetic progression <code>U(n+1)=transformer(U(n),V(n))</code> and putting the
+     * <code>U(n)</code> in a LispStream.
      * 
      * @param initialNewStream
      *            the first value of the new LispStream
      * @param otherStream
      *            the stream used to create the new one
-     * @param transform
-     *            the function that take the {@link Optional} (n-1)-value of the new stream with the {@link Optional}
-     *            n-value of the other stream and produce the n-value of the new stream
+     * @param transformer
+     *            the function that take the {@link Optional} n-value of the new stream with the {@link Optional}
+     *            n-value of the other stream and produce the (n+1)-value of the new stream
      * @return
      */
     public static <T> LispStream<T> createFrom(T initialNewStream, LispStream<T> otherStream,
-            BiFunction<Optional<T>, Optional<T>, T> transform) {
+            BiFunction<Optional<T>, Optional<T>, T> transformer) {
         if (otherStream == null) {
             return empty();
         }
-        Optional<T> nextValue = Optional.ofNullable(transform.apply(Optional.ofNullable(initialNewStream),
+        Optional<T> nextValue = Optional.ofNullable(transformer.apply(Optional.ofNullable(initialNewStream),
                 otherStream.first));
         if (!nextValue.isPresent()) {
             return empty();
         }
         LispStream<T> nextStream = otherStream.next.get();
-        return new LispStream<T>(initialNewStream, () -> createFrom(nextValue.get(), nextStream, transform));
+        return new LispStream<T>(initialNewStream, () -> createFrom(nextValue.get(), nextStream, transformer));
     }
 }
