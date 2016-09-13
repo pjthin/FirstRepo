@@ -1,8 +1,11 @@
 package fr.pjthin.root.functional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -15,18 +18,16 @@ import java.util.stream.Stream;
  */
 public class LispStream<T> {
 
-    private Optional<T> first;
+    private final Optional<T> first;
     private Supplier<LispStream<T>> next;
 
     private LispStream() {
-        this.first = Optional.empty();
-        this.next = () -> null;
+        this(Optional.empty(), null);
     }
 
-    public LispStream(Optional<T> first, Supplier<LispStream<T>> next) {
-        super();
+    private LispStream(Optional<T> first, Supplier<LispStream<T>> next) {
         this.first = first;
-        this.next = next;
+        this.next = memoize(next);
     }
 
     public LispStream(T first, Supplier<LispStream<T>> next) {
@@ -40,32 +41,46 @@ public class LispStream<T> {
 
     public Stream<T> stream() {
         if (first.isPresent() && next != null) {
-            return Stream.concat(Stream.of(first.get()), next.get().stream());
-        }
-        if (first.isPresent()) {
-            return Stream.of(first.get());
+            return Stream.concat(Stream.of(first.get()),
+                    Stream.generate(next).flatMap(lispStream -> lispStream.stream()));
         }
         return Stream.empty();
     }
 
-    public Supplier<LispStream<T>> next() {
-        return next;
+    public Optional<T> value(int position) {
+        return value(this, position);
     }
 
-    public void next(Supplier<LispStream<T>> next) {
-        this.next = next;
+    private Optional<T> value(LispStream<T> lispStream, int position) {
+        if (position == 0 || lispStream == null) {
+            return lispStream.first;
+        }
+        return value(lispStream.next.get(), position - 1);
     }
 
-    public Optional<T> first() {
-        return first;
+    public void forEach(Consumer<Optional<T>> consumer) {
+        forEach(this, consumer);
     }
 
-    public void first(T first) {
-        first(Optional.ofNullable(first));
+    private void forEach(LispStream<T> lispStream, Consumer<Optional<T>> consumer) {
+        if (lispStream.next == null) {
+            return;
+        }
+        consumer.accept(lispStream.first);
+        forEach(lispStream.next.get(), consumer);
     }
 
-    public void first(Optional<T> first) {
-        this.first = first;
+    public LispStream<T> limit(int max) {
+        limit(this, max);
+        return this;
+    }
+
+    private void limit(LispStream<T> lispStream, int max) {
+        if (max == 0 || lispStream.next == null) {
+            lispStream.next = null;
+            return;
+        }
+        limit(lispStream.next.get(), max - 1);
     }
 
     public static <T> LispStream<T> empty() {
@@ -97,7 +112,24 @@ public class LispStream<T> {
         if (!nextValue.isPresent()) {
             return empty();
         }
+        if (otherStream.next == null) {
+            return new LispStream<T>(initialNewStream, null);
+        }
         LispStream<T> nextStream = otherStream.next.get();
         return new LispStream<T>(initialNewStream, () -> createFrom(nextValue.get(), nextStream, transformer));
+    }
+
+    public static <T> Supplier<T> memoize(Supplier<T> delegate) {
+        if (delegate == null) {
+            return null;
+        }
+        AtomicReference<T> value = new AtomicReference<>();
+        return () -> {
+            T val = value.get();
+            if (val == null) {
+                val = value.updateAndGet(cur -> cur == null ? Objects.requireNonNull(delegate.get()) : cur);
+            }
+            return val;
+        };
     }
 }
