@@ -12,7 +12,7 @@ public interface UserMapper {
 
 	UserDto asDto(UserBo bo);
 
-//	UserVo asVo(UserDto dto);
+	// UserVo asVo(UserDto dto);
 
 	static class DateToStringMapper {
 		public String asString(Date date) {
