@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -17,74 +16,91 @@ import java.util.stream.Stream;
  *
  * @param <T>
  */
-public class LispStream<T> {
+public class LispStream<T> implements Iterable<T> {
 
-	private final Optional<T> first;
+	private final T first;
 	private Supplier<LispStream<T>> next;
 
 	private LispStream() {
-		this(Optional.empty(), null);
-	}
-
-	private LispStream(Optional<T> first, Supplier<LispStream<T>> next) {
-		this.first = first;
-		this.next = memoize(next);
+		this(null, null);
 	}
 
 	public LispStream(T first, Supplier<LispStream<T>> next) {
-		this(Optional.ofNullable(first), next);
+		this.first = first;
+		this.next = next;
 	}
 
 	public LispStream(List<T> list) {
-		this(list.isEmpty() ? null : list.get(0), () -> list.isEmpty() ? empty() : new LispStream<T>(list.subList(1,
-				list.size())));
+		this(list.isEmpty() ? null : list.get(0),
+				() -> list.isEmpty() ? empty() : new LispStream<T>(list.subList(1, list.size())));
 	}
 
 	public LispStream(Iterator<T> iterator) {
-		this(iterator.hasNext() ? iterator.next() : null, () -> iterator.hasNext() ? new LispStream<>(iterator)
-				: empty());
+		this(iterator.hasNext() ? iterator.next() : null,
+				() -> iterator.hasNext() ? new LispStream<>(iterator) : empty());
 	}
 
 	public Stream<T> stream() {
-		if (first.isPresent() && next != null) {
-			return Stream.concat(Stream.of(first.get()),
-					Stream.generate(next).flatMap(lispStream -> lispStream.stream()));
+		if (first != null && next != null) {
+			return Stream.concat(Stream.of(first), Stream.generate(next).flatMap(lispStream -> lispStream.stream()));
 		}
 		return Stream.empty();
 	}
 
-	public Optional<T> value(int position) {
-		return value(this, position);
-	}
-
-	private Optional<T> value(LispStream<T> lispStream, int position) {
-		if (lispStream == null) {
-			return Optional.empty();
+	public T value(int position) {
+		int i = 0;
+		for (T current : this) {
+			if (i == position) {
+				return current;
+			}
+			i++;
 		}
-		if (position == 0) {
-			return lispStream.first;
-		}
-		return value(lispStream.next.get(), position - 1);
+		return null;
 	}
 
-	public void forEach(Consumer<Optional<T>> consumer) {
-		forEach(this, consumer);
+	@Override
+	public Iterator<T> iterator() {
+		final LispStream<T> that = this;
+
+		return new Iterator<T>() {
+
+			LispStream<T> current = that;
+
+			@Override
+			public boolean hasNext() {
+				return current.next != null;
+			}
+
+			@Override
+			public T next() {
+				T tmp = current.first;
+				current = current.next.get();
+				return tmp;
+			}
+		};
 	}
 
-	private void forEach(LispStream<T> lispStream, Consumer<Optional<T>> consumer) {
+	public LispStream<T> skip(long n) {
+		
+		return skip(this, n);
+	}
+
+	private LispStream<T> skip(LispStream<T> lispStream, long n) {
 		if (lispStream.next == null) {
-			return;
+			return empty();
 		}
-		consumer.accept(lispStream.first);
-		forEach(lispStream.next.get(), consumer);
+		if (n == 0) {
+			return next.get();
+		}
+		return skip(lispStream.next.get(), n - 1);
 	}
 
-	public LispStream<T> limit(int max) {
-		limit(this, max);
+	public LispStream<T> limit(long maxSize) {
+		limit(this, maxSize);
 		return this;
 	}
 
-	private void limit(LispStream<T> lispStream, int max) {
+	private void limit(LispStream<T> lispStream, long max) {
 		if (max == 0 || lispStream.next == null) {
 			lispStream.next = null;
 			return;
@@ -119,8 +135,8 @@ public class LispStream<T> {
 		if (otherStream == null) {
 			return empty();
 		}
-		Optional<T> nextValue = Optional.ofNullable(transformer.apply(Optional.ofNullable(initialNewStream),
-				otherStream.first));
+		Optional<T> nextValue = Optional.ofNullable(
+				transformer.apply(Optional.ofNullable(initialNewStream), Optional.ofNullable(otherStream.first)));
 		if (!nextValue.isPresent()) {
 			return empty();
 		}
@@ -144,4 +160,5 @@ public class LispStream<T> {
 			return val;
 		};
 	}
+
 }
