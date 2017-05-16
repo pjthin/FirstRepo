@@ -198,19 +198,11 @@
 
 
 
-		<!-- scope provided because the processor is only needed at compile time -->
-		<dependency>
-			<groupId>fr.xebia.extras</groupId>
-			<artifactId>selma-processor</artifactId>
-			<version>0.14</version>
-			<scope>provided</scope>
-		</dependency>
-
 		<!-- This is the only real dependency you will have in your binaries -->
 		<dependency>
 			<groupId>fr.xebia.extras</groupId>
 			<artifactId>selma</artifactId>
-			<version>0.14</version>
+			<version>0.15</version>
 		</dependency>
 
 		<dependency>
@@ -236,6 +228,12 @@
 			<version>1.4.193</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.16.16</version>
+			<scope>provided</scope>
+		</dependency>
 
 	</dependencies>
 
@@ -248,6 +246,37 @@
 					<source>1.8</source>
 					<target>1.8</target>
 				</configuration>
+			</plugin>
+			<!-- some way to help selma to known that lombok is used -->
+			<plugin>
+				<groupId>org.bsc.maven</groupId>
+				<artifactId>maven-processor-plugin</artifactId>
+				<version>2.2.4</version>
+				<configuration>
+					<defaultOutputDirectory>
+						${project.build.directory}/generated-sources/selma
+					</defaultOutputDirectory>
+					<processors>
+						<processor>lombok.launch.AnnotationProcessorHider$AnnotationProcessor</processor>
+						<processor>fr.xebia.extras.selma.codegen.MapperProcessor</processor>
+					</processors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>process</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>process</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>fr.xebia.extras</groupId>
+						<artifactId>selma-processor</artifactId>
+						<version>0.15</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>
